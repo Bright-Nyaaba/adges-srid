@@ -1,0 +1,180 @@
+{
+  "entities": {
+    "Leader": {
+      "title": "Leader",
+      "description": "Executive and committee leaders of ADGES.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "program": { "type": "string" },
+        "level": { "type": "string" },
+        "bio": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "linkedinUrl": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "role", "order"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Photo gallery item from department activities and field trips.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "imageUrl", "order"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Student capstone and research projects.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "abstract": { "type": "string" },
+        "leadAuthor": { "type": "string" },
+        "team": { "type": "string" },
+        "year": { "type": "string" },
+        "program": { "type": "string" },
+        "supervisor": { "type": "string" },
+        "tags": { "type": "string" },
+        "docUrl": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "order"]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "Academic and career resources, past questions, and lecture slides.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileSize": { "type": "string" },
+        "uploadedAt": { "type": "string" }
+      },
+      "required": ["title", "fileUrl"]
+    },
+    "StoreItem": {
+      "title": "StoreItem",
+      "description": "ADGES merchandise and department gear available for order.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "inStock": { "type": "boolean" },
+        "sizes": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["title", "price", "order"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Merchandise orders submitted by students and alumni.",
+      "type": "object",
+      "properties": {
+        "items": { "type": "array" },
+        "total": { "type": "number" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["items", "total", "name", "email", "createdAt"]
+    },
+    "SiteContent": {
+      "title": "SiteContent",
+      "description": "Custom editable site copy and messages.",
+      "type": "object",
+      "properties": {
+        "hero_headline": { "type": "string" },
+        "hero_sub": { "type": "string" },
+        "about_intro": { "type": "string" },
+        "mission": { "type": "string" },
+        "vision": { "type": "string" }
+      }
+    },
+    "AdminList": {
+      "title": "AdminList",
+      "description": "Document holding authorized admin email addresses.",
+      "type": "object",
+      "properties": {
+        "emails": { "type": "array" }
+      },
+      "required": ["emails"]
+    },
+    "FacultyMember": {
+      "title": "FacultyMember",
+      "description": "Academic lecturers, department heads, and patrons of ADGES.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "role": { "type": "string" },
+        "category": { "type": "string" },
+        "department": { "type": "string" },
+        "qualification": { "type": "string" },
+        "specialization": { "type": "string" },
+        "bio": { "type": "string" },
+        "email": { "type": "string" },
+        "office": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "photoPath": { "type": "string" },
+        "bg": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name", "position"]
+    }
+  },
+  "firestore": {
+    "/leaders/{leaderId}": {
+      "schema": "Leader",
+      "description": "Executive and committee leaders of ADGES."
+    },
+    "/faculty/{facultyId}": {
+      "schema": "FacultyMember",
+      "description": "Faculty heads and academic lecturers of ADGES."
+    },
+    "/gallery/{galleryId}": {
+      "schema": "GalleryItem",
+      "description": "Photo gallery items from department activities and field trips."
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Student capstone and research projects."
+    },
+    "/resources/{resourceId}": {
+      "schema": "Resource",
+      "description": "Academic and career resources, past questions, and lecture slides."
+    },
+    "/store/{itemId}": {
+      "schema": "StoreItem",
+      "description": "ADGES merchandise and department gear available for order."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Merchandise orders submitted by students and alumni."
+    },
+    "/site/{siteDocId}": {
+      "schema": "SiteContent",
+      "description": "Custom editable site copy and messages."
+    },
+    "/meta/admins": {
+      "schema": "AdminList",
+      "description": "Document holding authorized admin email addresses."
+    }
+  }
+}

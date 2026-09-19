@@ -1,0 +1,34 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email != null &&
+        (
+          request.auth.token.email == 'nyaababright93@gmail.com' ||
+          (
+            firestore.exists(/databases/ai-studio-adges-b631fca9-0f04-4b08-8b0a-a17a7ffbf02d/documents/meta/admins) &&
+            request.auth.token.email in firestore.get(/databases/ai-studio-adges-b631fca9-0f04-4b08-8b0a-a17a7ffbf02d/documents/meta/admins).data.emails
+          ) ||
+          (
+            firestore.exists(/databases/(default)/documents/meta/admins) &&
+            request.auth.token.email in firestore.get(/databases/(default)/documents/meta/admins).data.emails
+          )
+        );
+    }
+
+    // Leader / gallery / project / store photos and resource files all live under /uploads/.
+    // Public read (it's a public website), write capped at 50 MB per file.
+    match /uploads/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 50 * 1024 * 1024;
+    }
+
+    // Deny everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

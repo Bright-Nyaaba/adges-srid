@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+functions/node_modules/
+
+# build output
+dist/
+functions/lib/
+
+# env files with real secrets
+.env
+.env.local
+.env.*.local
+functions/.env
+functions/.env.local
+
+# firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.tsbuildinfo
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.log

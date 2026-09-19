@@ -1,0 +1,21 @@
+{
+  "name": "adges-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Server-side API routes for the ADGES site: CSV order export and admin-allowlist management.",
+  "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.3.1",
+    "firebase-functions": "^5.0.1"
+  }
+}

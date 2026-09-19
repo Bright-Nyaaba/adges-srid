@@ -1,0 +1,6 @@
+{
+  "name": "ADGES Website",
+  "description": "Official website of ADGES (Association of Drilling and Geological Engineering Students), School of Railway and Infrastructure Development (SRID), University of Mines and Technology (UMaT).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

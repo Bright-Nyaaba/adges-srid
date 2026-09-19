@@ -1,0 +1,29 @@
+{
+  "name": "adges-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ADGES (Association of Drilling and Geological Engineering Students, SRID, UMaT) department website — React + Vite frontend with Firebase backend (Firestore, Storage, Auth) and a Cloud Functions API route.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && firebase deploy",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage:rules",
+    "deploy:functions": "cd functions && npm install && cd .. && firebase deploy --only functions",
+    "emulators": "firebase emulators:start"
+  },
+  "dependencies": {
+    "firebase": "^10.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
