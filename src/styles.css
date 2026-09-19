@@ -396,26 +396,9 @@ ul{margin:0;padding:0;list-style:none;}
 .footer-contact-icon{flex-shrink:0;margin-top:3px;color:var(--gold-400,#E8B923);opacity:0.9;}
 .footer-bottom{
   border-top:1px solid rgba(255,255,255,.12);margin-top:44px;padding-top:22px;
-  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;font-size:.78rem;color:#89A794;
+  display:flex;justify-content:center;align-items:center;text-align:center;font-size:.78rem;color:#89A794;
 }
-.footer-copy{line-height:1.55;color:#89A794;}
-.footer-admin-meta{display:inline-flex;align-items:center;gap:10px;}
-.footer-admin-link{
-  background:transparent;border:1px solid rgba(255,255,255,0.14);color:#89A794;font-family:var(--font-mono);
-  font-size:.74rem;cursor:pointer;padding:5px 12px;border-radius:4px;
-  display:inline-flex;align-items:center;gap:6px;transition:all .15s ease;
-}
-.footer-admin-link:hover{color:#F6D766;border-color:rgba(246,215,102,0.4);background:rgba(255,255,255,0.05);}
-.footer-admin-active{
-  color:#A5D6A7;font-family:var(--font-mono);font-size:.74rem;
-  display:inline-flex;align-items:center;gap:8px;
-}
-.footer-signout-btn{
-  background:none;border:1px solid rgba(255,255,255,0.2);color:#F4F8F2;
-  font-family:var(--font-mono);font-size:.7rem;padding:3px 8px;border-radius:3px;
-  cursor:pointer;transition:all .15s ease;
-}
-.footer-signout-btn:hover{border-color:#E57373;color:#FFCDD2;background:rgba(229,115,115,0.1);}
+.footer-copy{line-height:1.6;color:#89A794;text-align:center;max-width:70ch;}
 
 /* Tablet footer adjustments */
 @media (max-width:860px){
@@ -436,10 +419,8 @@ ul{margin:0;padding:0;list-style:none;}
   .footer-nav-link, .footer ul li a{display:inline-flex;align-items:center;padding:7px 0;min-height:36px;font-size:.88rem;}
   .footer-col-contact{grid-column:1 / -1;margin-top:6px;padding-top:22px;border-top:1px solid rgba(255,255,255,0.08);}
   .footer-contact-link, .footer-contact-item{padding:6px 0;font-size:.88rem;min-height:38px;}
-  .footer-bottom{margin-top:32px;padding-top:20px;flex-direction:column;align-items:flex-start;gap:14px;}
-  .footer-copy{font-size:.78rem;line-height:1.55;}
-  .footer-admin-meta{width:100%;display:flex;justify-content:flex-start;padding-top:10px;border-top:1px dashed rgba(255,255,255,0.08);}
-  .footer-admin-link{min-height:38px;padding:7px 14px;font-size:.76rem;}
+  .footer-bottom{margin-top:32px;padding-top:20px;justify-content:center;text-align:center;}
+  .footer-copy{font-size:.8rem;line-height:1.6;text-align:center;}
   .footer-quick-edit-bar{justify-content:flex-start;margin-bottom:14px;}
   .footer-quick-edit-bar .wp-card-edit-btn{width:100%;justify-content:center;}
 }

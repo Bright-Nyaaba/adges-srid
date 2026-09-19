@@ -1,17 +1,13 @@
 import React from 'react';
 import AdgesLogo from './AdgesLogo.jsx';
-import { signOut } from '../lib/auth.js';
 import { DEFAULT_SITE_SETTINGS } from '../data/defaults.js';
 
 export default function Footer({
   goTo,
-  user,
   isEditor,
-  onOpenAdminLogin,
   siteSettings,
   onOpenCustomizer
 }) {
-  const userLabel = user?.username || (user?.email ? user.email.split('@')[0] : 'Admin');
   const footerCfg = siteSettings?.footer || DEFAULT_SITE_SETTINGS.footer;
   const headerCfg = siteSettings?.header || DEFAULT_SITE_SETTINGS.header;
   const socials = footerCfg?.socials || {};
@@ -155,35 +151,6 @@ export default function Footer({
       {/* Bottom Bar */}
       <div className="shell footer-bottom">
         <span className="footer-copy">{footerCfg.copyright || '© 2026 ADGES — Association of Drilling and Geological Engineering Students, SRID, UMaT.'}</span>
-        <div className="footer-admin-meta">
-          {user ? (
-            <span className="footer-admin-active">
-              Admin: <strong>{userLabel}</strong> &bull;{' '}
-              <button
-                type="button"
-                className="footer-signout-btn"
-                onClick={signOut}
-                title="Sign out of Admin Portal"
-              >
-                Sign out
-              </button>
-            </span>
-          ) : (
-            <button
-              type="button"
-              id="admin-portal-footer-btn"
-              className="footer-admin-link"
-              onClick={onOpenAdminLogin}
-              title="Staff & Admin Portal"
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.65 }}>
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-              Admin Portal
-            </button>
-          )}
-        </div>
       </div>
     </footer>
   );
