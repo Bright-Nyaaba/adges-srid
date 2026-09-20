@@ -65,14 +65,88 @@ function sanitizeData(data) {
   return out;
 }
 
+/**
+ * Translates Firebase / network errors into clear, actionable UI messages.
+ */
+export function formatAdminErrorMessage(err, actionDescription = 'save changes') {
+  if (!err) return `Failed to ${actionDescription}. Please try again.`;
+  const code = err.code || '';
+  const rawMsg = err.message || '';
+
+  if (code === 'permission-denied' || rawMsg.includes('permission') || rawMsg.includes('insufficient permissions')) {
+    return `Permission Denied: Your account does not have write access to update this content in Firestore. Please ensure you are logged in with authorized admin credentials.`;
+  }
+  if (code === 'unavailable' || rawMsg.includes('network') || rawMsg.includes('offline')) {
+    return `Network Unavailable: Unable to connect to Firestore. Please check your internet connection and try again.`;
+  }
+  if (code === 'not-found') {
+    return `Document Not Found: The database record you are trying to update does not exist or has already been removed.`;
+  }
+  if (code === 'resource-exhausted' || code === 'quota-exceeded') {
+    return `Firestore Quota Limit: Database request quota exceeded. Please wait a few moments before trying again.`;
+  }
+  if (code === 'deadline-exceeded' || rawMsg.includes('timeout')) {
+    return `Request Timed Out: The database took too long to complete this update. Please try again.`;
+  }
+  if (code === 'unauthenticated') {
+    return `Session Expired: You must be logged in to make administrative changes. Please sign in again.`;
+  }
+  if (code === 'invalid-argument') {
+    return `Invalid Data: One or more fields contains invalid formatting: ${rawMsg}`;
+  }
+
+  return rawMsg || `Failed to ${actionDescription}. (Error: ${code || 'unknown'})`;
+}
+
 export async function addItem(collectionName, data) {
   const clean = sanitizeData(data);
-  return addDoc(collection(db, collectionName), clean);
+  try {
+    const docRef = await addDoc(collection(db, collectionName), clean);
+    console.info(`[db:addItem] Successfully created item in "${collectionName}" with ID "${docRef.id}"`, {
+      collection: collectionName,
+      docId: docRef.id,
+      timestamp: new Date().toISOString()
+    });
+    return docRef;
+  } catch (err) {
+    console.error(`[db:addItem] Failed to add document to collection "${collectionName}":`, {
+      operation: 'addItem',
+      collection: collectionName,
+      payload: clean,
+      errorCode: err?.code,
+      errorMessage: err?.message,
+      stack: err?.stack,
+      rawError: err,
+      timestamp: new Date().toISOString()
+    });
+    throw err;
+  }
 }
 
 export async function updateItem(collectionName, id, data) {
   const clean = sanitizeData(data);
-  return updateDoc(doc(db, collectionName, id), clean);
+  const docId = String(id);
+  try {
+    await updateDoc(doc(db, collectionName, docId), clean);
+    console.info(`[db:updateItem] Successfully updated document "${collectionName}/${docId}"`, {
+      collection: collectionName,
+      docId,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error(`[db:updateItem] Failed to update document "${collectionName}/${docId}":`, {
+      operation: 'updateItem',
+      collection: collectionName,
+      docId,
+      payload: clean,
+      errorCode: err?.code,
+      errorMessage: err?.message,
+      stack: err?.stack,
+      rawError: err,
+      timestamp: new Date().toISOString()
+    });
+    throw err;
+  }
 }
 
 export async function deleteItem(collectionName, idOrItem) {
@@ -81,13 +155,29 @@ export async function deleteItem(collectionName, idOrItem) {
   const targetName = typeof idOrItem === 'object' ? idOrItem?.name : null;
   const targetPosition = typeof idOrItem === 'object' ? (idOrItem?.position || idOrItem?.role) : null;
 
+  console.info(`[db:deleteItem] Initiating delete from "${collectionName}"`, {
+    collection: collectionName,
+    targetId,
+    targetName,
+    targetPosition,
+    timestamp: new Date().toISOString()
+  });
+
   const tasks = [];
+  let deleteErrors = [];
 
   // 1. Direct document deletion by document ID
   if (targetId) {
     tasks.push(
       deleteDoc(doc(db, collectionName, String(targetId))).catch((err) => {
-        console.warn(`[db] direct deleteDoc for ${collectionName}/${targetId}:`, err?.message);
+        console.warn(`[db:deleteItem] Direct deleteDoc failed for ${collectionName}/${targetId}:`, {
+          collection: collectionName,
+          targetId,
+          errorCode: err?.code,
+          errorMessage: err?.message,
+          error: err
+        });
+        deleteErrors.push(err);
       })
     );
   }
@@ -115,18 +205,44 @@ export async function deleteItem(collectionName, idOrItem) {
         if (idMatch || nameMatch || posAndNameMatch) {
           subTasks.push(
             deleteDoc(d.ref).catch((e) => {
-              console.warn(`[db] scan delete failed for doc ${d.id}:`, e?.message);
+              console.warn(`[db:deleteItem] Scan delete failed for doc ${d.id}:`, {
+                docId: d.id,
+                errorCode: e?.code,
+                errorMessage: e?.message,
+                error: e
+              });
+              deleteErrors.push(e);
             })
           );
         }
       });
       await Promise.allSettled(subTasks);
     } catch (err) {
-      console.warn(`[db] query scan delete for ${collectionName}:`, err?.message);
+      console.error(`[db:deleteItem] Query scan delete error for collection "${collectionName}":`, {
+        collection: collectionName,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        error: err
+      });
+      deleteErrors.push(err);
     }
   })());
 
-  return Promise.allSettled(tasks);
+  const results = await Promise.allSettled(tasks);
+  if (deleteErrors.length > 0 && tasks.length > 0) {
+    const isTotalFailure = deleteErrors.length >= tasks.length;
+    if (isTotalFailure) {
+      const primaryErr = deleteErrors[0];
+      console.error(`[db:deleteItem] All delete operations failed for "${collectionName}":`, {
+        collection: collectionName,
+        targetId,
+        errors: deleteErrors
+      });
+      throw primaryErr;
+    }
+  }
+
+  return results;
 }
 
 export async function isCollectionEmpty(collectionName) {
@@ -134,6 +250,7 @@ export async function isCollectionEmpty(collectionName) {
     const snap = await getDocs(query(collection(db, collectionName), fbLimit(1)));
     return snap.empty;
   } catch (e) {
+    console.warn(`[db:isCollectionEmpty] Error checking collection "${collectionName}":`, e?.message);
     return true;
   }
 }
@@ -143,25 +260,74 @@ export async function getDocData(path) {
     const snap = await getDoc(doc(db, path));
     return snap.exists() ? snap.data() : null;
   } catch (e) {
+    console.warn(`[db:getDocData] Error fetching document "${path}":`, {
+      path,
+      errorCode: e?.code,
+      errorMessage: e?.message
+    });
     return null;
   }
 }
 
 export async function setDocMerge(path, data) {
   const clean = sanitizeData(data);
-  return setDoc(doc(db, path), clean, { merge: true });
+  try {
+    await setDoc(doc(db, path), clean, { merge: true });
+    console.info(`[db:setDocMerge] Successfully saved document at "${path}"`, {
+      path,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error(`[db:setDocMerge] Failed to set/merge document at "${path}":`, {
+      operation: 'setDocMerge',
+      path,
+      payload: clean,
+      errorCode: err?.code,
+      errorMessage: err?.message,
+      stack: err?.stack,
+      rawError: err,
+      timestamp: new Date().toISOString()
+    });
+    throw err;
+  }
 }
 
 export async function updateDocPath(path, data) {
   const clean = sanitizeData(data);
-  return updateDoc(doc(db, path), clean);
+  try {
+    await updateDoc(doc(db, path), clean);
+    console.info(`[db:updateDocPath] Successfully updated document at "${path}"`, {
+      path,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error(`[db:updateDocPath] Failed to update document at "${path}":`, {
+      operation: 'updateDocPath',
+      path,
+      payload: clean,
+      errorCode: err?.code,
+      errorMessage: err?.message,
+      stack: err?.stack,
+      rawError: err,
+      timestamp: new Date().toISOString()
+    });
+    throw err;
+  }
 }
 
 export async function createOrder(order) {
   try {
-    return await addDoc(collection(db, 'orders'), { ...order, createdAt: new Date().toISOString() });
+    const docRef = await addDoc(collection(db, 'orders'), { ...order, createdAt: new Date().toISOString() });
+    console.info(`[db:createOrder] Order created in Firestore with ID "${docRef.id}"`);
+    return docRef;
   } catch (err) {
-    console.warn('[db] createOrder offline/demo fallback', err);
+    console.error('[db:createOrder] Failed to create order in Firestore, falling back to local storage:', {
+      order,
+      errorCode: err?.code,
+      errorMessage: err?.message,
+      error: err,
+      timestamp: new Date().toISOString()
+    });
     try {
       const existing = JSON.parse(localStorage.getItem('adges_demo_orders') || '[]');
       const newOrder = { ...order, id: 'demo-' + Date.now(), createdAt: new Date().toISOString() };

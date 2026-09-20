@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
-import { addItem, updateItem, deleteItem } from '../lib/db.js';
+import { addItem, updateItem, deleteItem, formatAdminErrorMessage } from '../lib/db.js';
 import { uploadFile, deleteFile } from '../lib/storage.js';
 import { ThumbSVG } from '../data/icons.jsx';
 
@@ -112,8 +112,18 @@ function GalleryFormModal({ item, itemCount, onClose }) {
       }
       onClose();
     } catch (e) {
-      console.error('[gallery] save error', e);
-      setError('Could not save: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, isEdit ? 'update photo' : 'add photo');
+      console.error('[admin:Gallery:handleSave] Save operation failed:', {
+        galleryId: item?.id,
+        isEdit,
+        data,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -126,7 +136,17 @@ function GalleryFormModal({ item, itemCount, onClose }) {
       if (item.photoPath) deleteFile(item.photoPath).catch(() => {});
       onClose();
     } catch (e) {
-      alert('Could not delete: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, 'delete photo');
+      console.error('[admin:Gallery:handleDelete] Deletion failed:', {
+        galleryId: item?.id,
+        title: item?.title,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     }
   }
 

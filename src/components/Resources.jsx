@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
-import { addItem, updateItem, deleteItem } from '../lib/db.js';
+import { addItem, updateItem, deleteItem, formatAdminErrorMessage } from '../lib/db.js';
 import { uploadFile, deleteFile } from '../lib/storage.js';
 
 export default function Resources({ resources, isEditor }) {
@@ -132,8 +132,18 @@ function ResourceFormModal({ item, onClose }) {
       }
       onClose();
     } catch (e) {
-      console.error('[resources] save error', e);
-      setError('Could not save: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, isEdit ? 'update academic resource' : 'add academic resource');
+      console.error('[admin:Resources:handleSave] Save operation failed:', {
+        resourceId: item?.id,
+        isEdit,
+        data,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -146,7 +156,17 @@ function ResourceFormModal({ item, onClose }) {
       if (item.filePath) deleteFile(item.filePath).catch(() => {});
       onClose();
     } catch (e) {
-      alert('Could not delete: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, 'delete academic resource');
+      console.error('[admin:Resources:handleDelete] Deletion failed:', {
+        resourceId: item?.id,
+        title: item?.title,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     }
   }
 

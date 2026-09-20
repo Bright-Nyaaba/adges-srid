@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal.jsx';
 import ConfirmDeleteModal from './ConfirmDeleteModal.jsx';
 import EditableText from './EditableText.jsx';
-import { addItem, updateItem, deleteItem, setDocMerge } from '../lib/db.js';
+import { addItem, updateItem, deleteItem, setDocMerge, formatAdminErrorMessage } from '../lib/db.js';
 import { uploadFile, deleteFile } from '../lib/storage.js';
 import { IconSVG } from '../data/icons.jsx';
 import { DEFAULT_TEXT, DEFAULT_SITE_SETTINGS } from '../data/defaults.js';
@@ -379,8 +379,16 @@ function PatronEditModal({ open, patron, siteSettings, onClose }) {
 
       onClose();
     } catch (e) {
-      console.error('[patron] save error', e);
-      setError('Could not save faculty advisor card: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, 'save faculty advisor card');
+      console.error('[admin:Leadership:handleSavePatron] Error saving faculty advisor card:', {
+        updatedPatron,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -604,8 +612,18 @@ function LeaderFormModal({ item, leaderCount, onClose, onDelete, onSave }) {
       }
       onClose();
     } catch (e) {
-      console.error('[leadership] save error', e);
-      setError('Could not save: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, isEdit ? 'update executive' : 'add executive');
+      console.error('[admin:Leadership:handleSaveLeader] Save operation failed:', {
+        leaderId: item?.id,
+        isEdit,
+        data,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -622,7 +640,17 @@ function LeaderFormModal({ item, leaderCount, onClose, onDelete, onSave }) {
       }
       onClose();
     } catch (e) {
-      setError('Could not delete: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, 'delete executive');
+      console.error('[admin:Leadership:executeDeleteLeader] Delete operation failed:', {
+        leaderId: item?.id,
+        name: item?.name,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
       setDeleting(false);
     }
   }

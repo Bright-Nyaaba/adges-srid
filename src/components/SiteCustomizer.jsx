@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { updateDocPath, setDocMerge } from '../lib/db.js';
+import { updateDocPath, setDocMerge, formatAdminErrorMessage } from '../lib/db.js';
 import { uploadFile } from '../lib/storage.js';
 import { DEFAULT_SITE_SETTINGS } from '../data/defaults.js';
 import AdgesLogo from './AdgesLogo.jsx';
@@ -95,31 +95,65 @@ export default function SiteCustomizer({
 
   async function handlePublish() {
     setSaving(true);
-    setSaveStatus('');
+    setSaveStatus({ type: 'info', msg: 'Publishing changes to Firestore…' });
     try {
       await updateDocPath('site/settings', draft);
-      setSaveStatus('✓ Published changes to live site!');
-      setTimeout(() => setSaveStatus(''), 4000);
+      setSaveStatus({ type: 'success', msg: '✓ Published changes to live site!' });
+      setTimeout(() => setSaveStatus(null), 4000);
     } catch (err) {
       try {
         await setDocMerge('site/settings', draft);
-        setSaveStatus('✓ Published changes to live site!');
-        setTimeout(() => setSaveStatus(''), 4000);
+        setSaveStatus({ type: 'success', msg: '✓ Published changes to live site!' });
+        setTimeout(() => setSaveStatus(null), 4000);
       } catch (err2) {
-        console.error('[customizer] save error', err2);
-        setSaveStatus('⚠️ Error publishing changes. Please check permissions.');
+        const errorReason = formatAdminErrorMessage(err2, 'publish site settings');
+        console.error('[admin:SiteCustomizer:handlePublish] Error saving site settings:', {
+          targetDoc: 'site/settings',
+          draftSettings: draft,
+          primaryError: err,
+          fallbackError: err2,
+          errorCode: err2?.code,
+          errorMessage: err2?.message,
+          stack: err2?.stack,
+          timestamp: new Date().toISOString()
+        });
+        setSaveStatus({
+          type: 'error',
+          msg: `⚠️ Error publishing changes: ${errorReason}`
+        });
       }
     } finally {
       setSaving(false);
     }
   }
 
-  function handleResetDefaults() {
+  async function handleResetDefaults() {
     if (window.confirm('Reset all site customizer settings (colors, logo, footer, header) back to official defaults?')) {
       onUpdateSettings(DEFAULT_SITE_SETTINGS);
-      updateDocPath('site/settings', DEFAULT_SITE_SETTINGS).catch(() => {});
-      setSaveStatus('↺ Reset to defaults.');
-      setTimeout(() => setSaveStatus(''), 3000);
+      try {
+        await updateDocPath('site/settings', DEFAULT_SITE_SETTINGS);
+        setSaveStatus({ type: 'success', msg: '↺ Reset to defaults and saved to cloud.' });
+        setTimeout(() => setSaveStatus(null), 3000);
+      } catch (err) {
+        try {
+          await setDocMerge('site/settings', DEFAULT_SITE_SETTINGS);
+          setSaveStatus({ type: 'success', msg: '↺ Reset to defaults and saved to cloud.' });
+          setTimeout(() => setSaveStatus(null), 3000);
+        } catch (err2) {
+          const errorReason = formatAdminErrorMessage(err2, 'reset site settings');
+          console.error('[admin:SiteCustomizer:handleResetDefaults] Failed to reset site settings in cloud:', {
+            error: err2,
+            errorCode: err2?.code,
+            errorMessage: err2?.message,
+            stack: err2?.stack,
+            timestamp: new Date().toISOString()
+          });
+          setSaveStatus({
+            type: 'error',
+            msg: `⚠️ Cloud Reset Failed: ${errorReason}`
+          });
+        }
+      }
     }
   }
 
@@ -134,11 +168,23 @@ export default function SiteCustomizer({
           ...prev,
           header: { ...prev.header, customLogoUrl: res.url }
         }));
-        setSaveStatus('Logo uploaded! Click Publish to apply permanently.');
+        setSaveStatus({ type: 'success', msg: '✓ Logo uploaded! Click Publish to apply permanently.' });
       }
     } catch (err) {
-      console.error('[logo-upload] error', err);
-      alert('Could not upload logo file. You can also paste an image URL directly.');
+      console.error('[admin:SiteCustomizer:handleLogoUpload] Failed to upload logo file:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        error: err,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        stack: err?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setSaveStatus({
+        type: 'error',
+        msg: `⚠️ Logo upload failed: ${err.message || 'Could not upload file. You can paste an image URL directly.'}`
+      });
     } finally {
       setUploadingLogo(false);
     }
@@ -181,7 +227,11 @@ export default function SiteCustomizer({
           >
             ↺ Reset
           </button>
-          {saveStatus && <span className="wp-save-status">{saveStatus}</span>}
+          {saveStatus && (
+            <span className={`wp-save-status ${saveStatus.type === 'error' ? 'is-error' : ''}`}>
+              {typeof saveStatus === 'string' ? saveStatus : saveStatus.msg}
+            </span>
+          )}
         </div>
 
         {/* Navigation Tabs */}

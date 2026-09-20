@@ -41,6 +41,21 @@ function getDeletedIds(key) {
   }
 }
 
+export function flattenDocData(obj, prefix = '') {
+  const result = {};
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return result;
+  for (const [key, val] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (val && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date)) {
+      result[fullKey] = val;
+      Object.assign(result, flattenDocData(val, fullKey));
+    } else {
+      result[fullKey] = val;
+    }
+  }
+  return result;
+}
+
 function isItemDeleted(item, deletedList) {
   if (!item || !deletedList || deletedList.length === 0) return false;
   const idLower = String(item.id || '').trim().toLowerCase();
@@ -90,8 +105,24 @@ export default function App() {
     return DEFAULT_FACULTY.filter(f => !isItemDeleted(f, deleted));
   });
   const [orders, setOrders] = useState([]);
-  const [text, setText] = useState(DEFAULT_TEXT);
-  const [siteSettings, setSiteSettings] = useState(DEFAULT_SITE_SETTINGS);
+  const [text, setText] = useState(() => {
+    try {
+      const cached = localStorage.getItem('adges_site_content_cache');
+      if (cached) {
+        return { ...DEFAULT_TEXT, ...JSON.parse(cached) };
+      }
+    } catch {}
+    return DEFAULT_TEXT;
+  });
+  const [siteSettings, setSiteSettings] = useState(() => {
+    try {
+      const cached = localStorage.getItem('adges_site_settings_cache');
+      if (cached) {
+        return { ...DEFAULT_SITE_SETTINGS, ...JSON.parse(cached) };
+      }
+    } catch {}
+    return DEFAULT_SITE_SETTINGS;
+  });
 
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -198,22 +229,64 @@ export default function App() {
         }
       }),
       subscribeDoc('site/content', (data) => {
-        if (data) setText((t) => ({ ...t, ...data }));
+        if (data) {
+          const flattened = flattenDocData(data);
+          setText((prev) => {
+            const merged = { ...prev, ...data, ...flattened };
+            try {
+              localStorage.setItem('adges_site_content_cache', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
       }),
       subscribeDoc('site/settings', (data) => {
         if (data) {
-          setSiteSettings((prev) => ({
-            ...prev,
-            ...data,
-            theme: { ...prev.theme, ...(data.theme || {}) },
-            header: { ...prev.header, ...(data.header || {}) },
-            footer: { ...prev.footer, ...(data.footer || {}) },
-            cards: { ...prev.cards, ...(data.cards || {}) }
-          }));
+          setSiteSettings((prev) => {
+            const merged = {
+              ...prev,
+              ...data,
+              theme: { ...prev.theme, ...(data.theme || {}) },
+              header: { ...prev.header, ...(data.header || {}) },
+              footer: { ...prev.footer, ...(data.footer || {}) },
+              cards: { ...prev.cards, ...(data.cards || {}) }
+            };
+            try {
+              localStorage.setItem('adges_site_settings_cache', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
         }
       })
     ];
     return () => unsubs.forEach((u) => u && u());
+  }, []);
+
+  // Real-time optimistic updates listener from EditableText
+  useEffect(() => {
+    function handleCustomTextUpdate(e) {
+      const { field, value } = e.detail || {};
+      if (field && value !== undefined) {
+        setText((prev) => {
+          const next = { ...prev, [field]: value };
+          const parts = field.split('.');
+          if (parts.length > 1) {
+            let curr = next;
+            for (let i = 0; i < parts.length - 1; i++) {
+              curr[parts[i]] = { ...(curr[parts[i]] || {}) };
+              curr = curr[parts[i]];
+            }
+            curr[parts[parts.length - 1]] = value;
+          }
+          try {
+            localStorage.setItem('adges_site_content_cache', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+      }
+    }
+    window.addEventListener('adges-text-update', handleCustomTextUpdate);
+    return () => window.removeEventListener('adges-text-update', handleCustomTextUpdate);
   }, []);
 
   // Orders are read-restricted to admins by firestore.rules, so only subscribe when editing.
@@ -317,18 +390,39 @@ export default function App() {
     try {
       await deleteItem('leaders', target || { id, name, position });
     } catch (err) {
-      console.warn('[db] Firestore deleteLeader warning:', err);
+      console.error('[admin:App:handleDeleteLeader] Failed to delete leader from Firestore:', {
+        targetId: id,
+        targetName: name,
+        error: err,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        timestamp: new Date().toISOString()
+      });
+      throw err;
     }
   }, [leaders]);
 
   const handleSaveLeader = useCallback(async (leaderData, isEdit, originalItem) => {
     const targetId = leaderData.id || originalItem?.id;
-    if (isEdit && targetId) {
-      setLeaders(prev => prev.map(l => (l.id === targetId || l.name === originalItem?.name) ? { ...l, ...leaderData, id: targetId } : l));
-      await updateItem('leaders', targetId, leaderData);
-    } else {
-      const added = await addItem('leaders', leaderData);
-      setLeaders(prev => [...prev, { ...leaderData, id: added.id }]);
+    try {
+      if (isEdit && targetId) {
+        setLeaders(prev => prev.map(l => (l.id === targetId || l.name === originalItem?.name) ? { ...l, ...leaderData, id: targetId } : l));
+        await updateItem('leaders', targetId, leaderData);
+      } else {
+        const added = await addItem('leaders', leaderData);
+        setLeaders(prev => [...prev, { ...leaderData, id: added.id }]);
+      }
+    } catch (err) {
+      console.error('[admin:App:handleSaveLeader] Failed to persist leader:', {
+        targetId,
+        isEdit,
+        leaderData,
+        error: err,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        timestamp: new Date().toISOString()
+      });
+      throw err;
     }
   }, []);
 
@@ -356,18 +450,39 @@ export default function App() {
     try {
       await deleteItem('faculty', target || { id, name, position });
     } catch (err) {
-      console.warn('[db] Firestore deleteFaculty warning:', err);
+      console.error('[admin:App:handleDeleteFaculty] Failed to delete faculty member from Firestore:', {
+        targetId: id,
+        targetName: name,
+        error: err,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        timestamp: new Date().toISOString()
+      });
+      throw err;
     }
   }, [faculty]);
 
   const handleSaveFaculty = useCallback(async (facultyData, isEdit, originalItem) => {
     const targetId = facultyData.id || originalItem?.id;
-    if (isEdit && targetId) {
-      setFaculty(prev => prev.map(f => (f.id === targetId || f.name === originalItem?.name) ? { ...f, ...facultyData, id: targetId } : f));
-      await updateItem('faculty', targetId, facultyData);
-    } else {
-      const added = await addItem('faculty', facultyData);
-      setFaculty(prev => [...prev, { ...facultyData, id: added.id }]);
+    try {
+      if (isEdit && targetId) {
+        setFaculty(prev => prev.map(f => (f.id === targetId || f.name === originalItem?.name) ? { ...f, ...facultyData, id: targetId } : f));
+        await updateItem('faculty', targetId, facultyData);
+      } else {
+        const added = await addItem('faculty', facultyData);
+        setFaculty(prev => [...prev, { ...facultyData, id: added.id }]);
+      }
+    } catch (err) {
+      console.error('[admin:App:handleSaveFaculty] Failed to persist faculty member:', {
+        targetId,
+        isEdit,
+        facultyData,
+        error: err,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        timestamp: new Date().toISOString()
+      });
+      throw err;
     }
   }, []);
 
@@ -494,9 +609,7 @@ export default function App() {
       <Footer
         goTo={goTo}
         isEditor={isEditor}
-        user={user}
         siteSettings={siteSettings}
-        onOpenAdminLogin={() => setAdminLoginOpen(true)}
         onOpenCustomizer={handleOpenCustomizer}
       />
 

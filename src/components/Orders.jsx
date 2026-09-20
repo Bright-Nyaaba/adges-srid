@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { auth, cloudInfo } from '../firebase.js';
 import { backupDatabaseToCloudStorage, exportOrdersCsvClient } from '../lib/storage.js';
+import { formatAdminErrorMessage } from '../lib/db.js';
 
 export default function Orders({ orders = [], leaders = [], gallery = [], resources = [], projects = [], store = [], text = {} }) {
   const [exporting, setExporting] = useState(false);
@@ -12,7 +13,16 @@ export default function Orders({ orders = [], leaders = [], gallery = [], resour
     try {
       exportOrdersCsvClient(orders);
     } catch (e) {
-      setError('Could not export CSV: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, 'export orders CSV');
+      console.error('[admin:Orders:handleExportCsv] Export failed:', {
+        orderCount: orders.length,
+        error: e,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     }
   }
 
@@ -42,9 +52,18 @@ export default function Orders({ orders = [], leaders = [], gallery = [], resour
       const result = await backupDatabaseToCloudStorage(fullSnapshot);
       setBackupResult(result);
     } catch (e) {
-      setError('Could not save database backup to Cloud Storage: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, 'backup database to Cloud Storage');
+      console.error('[admin:Orders:handleBackupDatabase] Cloud backup failed:', {
+        error: e,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
+    } finally {
+      setBackingUp(false);
     }
-    setBackingUp(false);
   }
 
   return (

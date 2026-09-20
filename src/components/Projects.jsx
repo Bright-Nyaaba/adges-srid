@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import Modal from './Modal.jsx';
 import ProjectCard from './ProjectCard.jsx';
-import { addItem, updateItem, deleteItem } from '../lib/db.js';
+import { addItem, updateItem, deleteItem, formatAdminErrorMessage } from '../lib/db.js';
 import { uploadFile, deleteFile } from '../lib/storage.js';
 import { ICON_OPTIONS } from '../data/icons.jsx';
 
@@ -117,8 +117,18 @@ function ProjectFormModal({ item, itemCount, onClose }) {
       }
       onClose();
     } catch (e) {
-      console.error('[projects] save error', e);
-      setError('Could not save: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, isEdit ? 'update project' : 'add project');
+      console.error('[admin:Projects:handleSave] Save operation failed:', {
+        projectId: item?.id,
+        isEdit,
+        data,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -131,7 +141,17 @@ function ProjectFormModal({ item, itemCount, onClose }) {
       if (item.photoPath) deleteFile(item.photoPath).catch(() => {});
       onClose();
     } catch (e) {
-      alert('Could not delete: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, 'delete project');
+      console.error('[admin:Projects:handleDelete] Deletion failed:', {
+        projectId: item?.id,
+        title: item?.title,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     }
   }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Modal from './Modal.jsx';
-import { addItem, updateItem, deleteItem } from '../lib/db.js';
+import { addItem, updateItem, deleteItem, formatAdminErrorMessage } from '../lib/db.js';
 import { uploadFile, deleteFile } from '../lib/storage.js';
 import { IconSVG, STORE_ICON_OPTIONS } from '../data/icons.jsx';
 
@@ -125,8 +125,18 @@ function StoreFormModal({ item, itemCount, onClose }) {
       }
       onClose();
     } catch (e) {
-      console.error('[store] save error', e);
-      setError('Could not save: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, isEdit ? 'update store product' : 'add store product');
+      console.error('[admin:Store:handleSave] Save operation failed:', {
+        productId: item?.id,
+        isEdit,
+        data,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -139,7 +149,17 @@ function StoreFormModal({ item, itemCount, onClose }) {
       if (item.photoPath) deleteFile(item.photoPath).catch(() => {});
       onClose();
     } catch (e) {
-      alert('Could not delete: ' + (e.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(e, 'delete store product');
+      console.error('[admin:Store:handleDelete] Deletion failed:', {
+        productId: item?.id,
+        title: item?.title,
+        errorCode: e?.code,
+        errorMessage: e?.message,
+        error: e,
+        stack: e?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     }
   }
 

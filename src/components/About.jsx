@@ -144,9 +144,23 @@ export default function About({
                 isEditor={isEditor}
               />
             </div>
-            <a href="#leadership" className="btn btn-outline" onClick={(e) => { e.preventDefault(); goTo('leadership'); }}>
-              {text['about.leadershipCta'] || DEFAULT_TEXT['about.leadershipCta']}
-            </a>
+            <div className="editable-cta-wrap">
+              <a href="#leadership" className="btn btn-outline" onClick={(e) => { e.preventDefault(); goTo('leadership'); }}>
+                {text['about.leadershipCta'] || DEFAULT_TEXT['about.leadershipCta']}
+              </a>
+              {isEditor && (
+                <EditableText
+                  as="span"
+                  text={text['about.leadershipCta']}
+                  defaultValue={DEFAULT_TEXT['about.leadershipCta']}
+                  field="about.leadershipCta"
+                  isEditor={isEditor}
+                  showLabel={false}
+                  buttonLabel="✎ Edit button"
+                  className="inline-cta-editor"
+                />
+              )}
+            </div>
           </div>
 
           <div className="people-grid">

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import Modal from './Modal.jsx';
 import ConfirmDeleteModal from './ConfirmDeleteModal.jsx';
 import EditableText from './EditableText.jsx';
-import { addItem, updateItem, deleteItem } from '../lib/db.js';
+import { addItem, updateItem, deleteItem, formatAdminErrorMessage } from '../lib/db.js';
 import { uploadFile, deleteFile } from '../lib/storage.js';
 import { IconSVG } from '../data/icons.jsx';
 import { DEFAULT_TEXT } from '../data/defaults.js';
@@ -287,25 +287,42 @@ export default function FacultySection({
 
                     {/* Footer with Contact Links */}
                     <div className="faculty-footer">
-                      {item.email ? (
-                        <a
-                          href={`mailto:${item.email}`}
-                          className="faculty-email-link"
-                          title={`Email ${item.name}`}
-                        >
-                          <span>✉</span>
-                          <span>{item.email}</span>
-                        </a>
-                      ) : (
-                        <span style={{ color: 'var(--ink-500)', fontSize: '.75rem' }}>UMaT Faculty</span>
-                      )}
+                      <div className="faculty-footer-main">
+                        {item.email ? (
+                          <a
+                            href={`mailto:${item.email}`}
+                            className="faculty-email-link"
+                            title={`Email ${item.name}`}
+                          >
+                            <span>✉</span>
+                            <span>{item.email}</span>
+                          </a>
+                        ) : (
+                          <span style={{ color: 'var(--ink-500)', fontSize: '.75rem' }}>UMaT Faculty</span>
+                        )}
+                      </div>
 
-                      {item.office && (
-                        <span className="faculty-office" title="Office Location">
-                          <span>📍</span>
-                          <span>{item.office}</span>
-                        </span>
-                      )}
+                      <div className="faculty-footer-meta">
+                        {item.office && (
+                          <span className="faculty-office" title="Office Location">
+                            <span>📍</span>
+                            <span>{item.office}</span>
+                          </span>
+                        )}
+
+                        {item.linkedinUrl && (
+                          <a
+                            href={item.linkedinUrl.startsWith('http://') || item.linkedinUrl.startsWith('https://') ? item.linkedinUrl : `https://${item.linkedinUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="faculty-linkedin-link"
+                            title={`${item.name} on LinkedIn`}
+                            aria-label={`${item.name}'s LinkedIn Profile`}
+                          >
+                            <IconSVG name="linkedin" size={15} />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -359,6 +376,7 @@ function FacultyFormModal({ faculty, totalCount, onClose, onDelete, onSave }) {
   const [bio, setBio] = useState(faculty?.bio || '');
   const [email, setEmail] = useState(faculty?.email || '');
   const [office, setOffice] = useState(faculty?.office || '');
+  const [linkedinUrl, setLinkedinUrl] = useState(faculty?.linkedinUrl || '');
   const [bg, setBg] = useState(faculty?.bg || '#155232');
   const [order, setOrder] = useState(faculty?.order ?? totalCount + 1);
 
@@ -416,6 +434,7 @@ function FacultyFormModal({ faculty, totalCount, onClose, onDelete, onSave }) {
         bio: bio.trim(),
         email: email.trim(),
         office: office.trim(),
+        linkedinUrl: linkedinUrl.trim(),
         bg,
         order: Number(order) || 0,
         photoUrl,
@@ -435,7 +454,18 @@ function FacultyFormModal({ faculty, totalCount, onClose, onDelete, onSave }) {
       }
       onClose();
     } catch (err) {
-      setError(err.message || 'Could not save faculty member.');
+      const errorMsg = formatAdminErrorMessage(err, isEdit ? 'update faculty member' : 'add faculty member');
+      console.error('[admin:FacultySection:handleSave] Save operation failed:', {
+        facultyId: faculty?.id,
+        isEdit,
+        payload,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        error: err,
+        stack: err?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -454,7 +484,17 @@ function FacultyFormModal({ faculty, totalCount, onClose, onDelete, onSave }) {
       }
       onClose();
     } catch (err) {
-      setError('Could not delete: ' + (err.message || 'unknown error'));
+      const errorMsg = formatAdminErrorMessage(err, 'delete faculty member');
+      console.error('[admin:FacultySection:executeDelete] Deletion operation failed:', {
+        facultyId: faculty?.id,
+        name: faculty?.name,
+        errorCode: err?.code,
+        errorMessage: err?.message,
+        error: err,
+        stack: err?.stack,
+        timestamp: new Date().toISOString()
+      });
+      setError(errorMsg);
       setDeleting(false);
     }
   }
@@ -546,6 +586,27 @@ function FacultyFormModal({ faculty, totalCount, onClose, onDelete, onSave }) {
             />
           </div>
           <div>
+            <label>LinkedIn Profile URL</label>
+            <input
+              type="url"
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              placeholder="https://www.linkedin.com/in/username"
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+          <div>
+            <label>Research Specialization & Courses</label>
+            <input
+              type="text"
+              value={specialization}
+              onChange={(e) => setSpecialization(e.target.value)}
+              placeholder="e.g. Directional Drilling, Well Completion, Offshore Hydraulics"
+            />
+          </div>
+          <div>
             <label>Display Order</label>
             <input
               type="number"
@@ -554,14 +615,6 @@ function FacultyFormModal({ faculty, totalCount, onClose, onDelete, onSave }) {
             />
           </div>
         </div>
-
-        <label>Research Specialization & Courses</label>
-        <input
-          type="text"
-          value={specialization}
-          onChange={(e) => setSpecialization(e.target.value)}
-          placeholder="e.g. Directional Drilling, Well Completion, Offshore Hydraulics"
-        />
 
         <label>Biography / Academic Profile</label>
         <textarea

@@ -131,6 +131,7 @@
         "bio": { "type": "string" },
         "email": { "type": "string" },
         "office": { "type": "string" },
+        "linkedinUrl": { "type": "string" },
         "photoUrl": { "type": "string" },
         "photoPath": { "type": "string" },
         "bg": { "type": "string" },

@@ -63,6 +63,8 @@ export default function Home({
                     defaultValue={DEFAULT_TEXT['hero.ctaAbout']}
                     field="hero.ctaAbout"
                     isEditor={isEditor}
+                    showLabel={false}
+                    buttonLabel="✎ Edit button"
                     className="inline-cta-editor"
                   />
                 )}
@@ -78,6 +80,8 @@ export default function Home({
                     defaultValue={DEFAULT_TEXT['hero.ctaProjects']}
                     field="hero.ctaProjects"
                     isEditor={isEditor}
+                    showLabel={false}
+                    buttonLabel="✎ Edit button"
                     className="inline-cta-editor"
                   />
                 )}
@@ -261,9 +265,23 @@ export default function Home({
                 isEditor={isEditor}
               />
             </div>
-            <a href="#projects" className="btn btn-outline" onClick={(e) => { e.preventDefault(); goTo('projects'); }}>
-              {text['home.projectsCta'] || DEFAULT_TEXT['home.projectsCta']}
-            </a>
+            <div className="editable-cta-wrap">
+              <a href="#projects" className="btn btn-outline" onClick={(e) => { e.preventDefault(); goTo('projects'); }}>
+                {text['home.projectsCta'] || DEFAULT_TEXT['home.projectsCta']}
+              </a>
+              {isEditor && (
+                <EditableText
+                  as="span"
+                  text={text['home.projectsCta']}
+                  defaultValue={DEFAULT_TEXT['home.projectsCta']}
+                  field="home.projectsCta"
+                  isEditor={isEditor}
+                  showLabel={false}
+                  buttonLabel="✎ Edit button"
+                  className="inline-cta-editor"
+                />
+              )}
+            </div>
           </div>
           <div className="card-grid">
             {projects.slice(0, 3).map((p, i) => (
